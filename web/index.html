@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AWS RDS Blue/Green AI Upgrade Orchestrator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+
+  <!-- Top Navigation -->
+  <header class="navbar">
+    <div class="brand-section">
+      <div class="brand-icon">⚡</div>
+      <div>
+        <div class="brand-title">RDS Upgrade Orchestrator</div>
+        <div class="brand-subtitle">AI Agentic Blue/Green Engine</div>
+      </div>
+    </div>
+
+    <div class="nav-controls">
+      <!-- AWS Region Selector -->
+      <div class="control-badge">
+        <span>🌐 Region:</span>
+        <select id="regionSelect" class="control-select">
+          <option value="us-east-1">us-east-1 (N. Virginia)</option>
+          <option value="us-west-2">us-west-2 (Oregon)</option>
+          <option value="eu-west-1">eu-west-1 (Ireland)</option>
+          <option value="ap-south-1">ap-south-1 (Mumbai)</option>
+        </select>
+      </div>
+
+      <!-- Live AWS Indicator Badge -->
+      <div class="control-badge" style="border-color: rgba(16, 185, 129, 0.4); background: rgba(16, 185, 129, 0.1); color: var(--accent-emerald);">
+        <span style="color: var(--accent-emerald);">●</span> <span>AWS Live Account</span>
+      </div>
+
+      <!-- AI Brain Provider Selector -->
+      <div class="control-badge">
+        <span>🤖 Model:</span>
+        <select id="llmProviderSelect" class="control-select">
+          <option value="local_llm" selected>LM Studio: DeepSeek-R1 (localhost:1234)</option>
+          <option value="gemini_flash">Gemini 2.5 Flash (Cloud API)</option>
+          <option value="built_in">Deterministic Agent (Rule-based Fast)</option>
+        </select>
+      </div>
+
+      <!-- Settings / Config Modal Button -->
+      <button id="settingsBtn" class="btn-icon" title="Configure Keys & Endpoints">⚙️</button>
+    </div>
+  </header>
+
+  <!-- Navigation Tabs -->
+  <nav class="tabs-header">
+    <button class="tab-btn active" data-tab="fleetPane">
+      <span>🗄️ Fleet Discovery</span>
+      <span id="fleetCountBadge" class="tab-badge">0</span>
+    </button>
+    <button class="tab-btn" data-tab="chatPane">
+      <span>💬 AI Copilot Chat</span>
+    </button>
+    <button class="tab-btn" data-tab="pipelinePane">
+      <span>🚀 Upgrade Mission Control</span>
+      <span id="pipelineStatusBadge" class="tab-badge" style="display:none;">READY</span>
+    </button>
+    <button class="tab-btn" data-tab="doomsdayPane">
+      <span>🚨 Doomsday Rollback</span>
+    </button>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="main-content">
+
+    <!-- 1. FLEET DISCOVERY PANE -->
+    <section id="fleetPane" class="tab-pane active">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+        <div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.5rem;">Database Fleet Inventory</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.25rem;">
+            Discovered RDS instances and Aurora DB clusters ready for pre-flight audit and Blue/Green migration.
+          </p>
+        </div>
+        <button id="refreshFleetBtn" class="btn btn-secondary">🔄 Refresh Fleet</button>
+      </div>
+
+      <div id="fleetCardsGrid" class="grid-cards">
+        <!-- Injected via JavaScript -->
+      </div>
+    </section>
+
+    <!-- 2. AI COPILOT CHAT PANE -->
+    <section id="chatPane" class="tab-pane">
+      <div class="chat-layout">
+        
+        <!-- 1. LEFT SIDEBAR: CHAT SESSIONS / THREADS -->
+        <aside class="chat-sessions-sidebar">
+          <div class="sessions-header">
+            <button id="newChatBtn" class="new-chat-btn" onclick="createNewChatSession()">
+              <span>➕</span>
+              <span>New Chat Thread</span>
+            </button>
+            <div style="display: flex; gap: 4px;">
+              <select id="chatDbSelect" class="chat-input" style="font-size: 0.78rem; padding: 4px 6px; width: 100%;">
+                <option value="">🎯 New Thread for DB...</option>
+              </select>
+            </div>
+          </div>
+          <div id="sessionsListContainer" class="sessions-list">
+            <!-- Injected dynamically: list of chat threads -->
+          </div>
+        </aside>
+
+        <!-- 2. CENTER: ACTIVE CONVERSATION WORKSPACE -->
+        <div class="chat-card">
+          
+          <!-- Persistent Chat Header & Active Thread Info -->
+          <div class="chat-user-header" style="display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 1.25rem; background: rgba(0, 242, 254, 0.03); border-bottom: 1px solid var(--border-subtle);">
+            <div style="display: flex; align-items: center; gap: 10px;">
+              <span id="chatUserAvatar" style="font-size: 1.4rem; background: rgba(255,255,255,0.06); padding: 4px 8px; border-radius: 8px;">👨‍💻</span>
+              <div>
+                <div style="font-size: 0.88rem; font-weight: 700; color: var(--text-main); display: flex; align-items: center; gap: 6px;">
+                  <span id="activeSessionTitle">General Fleet Copilot</span>
+                  <span id="activeSessionDbBadge" class="val-badge info" style="font-size: 0.68rem; padding: 1px 6px; display: none;">-</span>
+                </div>
+                <div style="font-size: 0.75rem; color: var(--text-muted);">
+                  User: <strong id="chatUserName" style="color:var(--text-main);">Cloud DevOps Lead</strong> • <span id="chatUserRoleBadge" style="color:var(--accent-cyan);">Database Administrator</span>
+                </div>
+              </div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 4px 10px;" onclick="openProfileModal()">✏️ Profile</button>
+              <button class="btn btn-secondary" style="font-size: 0.78rem; padding: 4px 10px; color: var(--text-muted);" onclick="clearPersistentChat()">🧹 Clear Thread</button>
+            </div>
+          </div>
+
+          <div id="chatMessages" class="chat-messages">
+            <!-- Messages injected dynamically from persistent storage -->
+          </div>
+          <div class="chat-input-bar">
+            <input type="text" id="chatInput" class="chat-input" placeholder="Type a command: 'Upgrade test-rds-pg14 to 18.3' or 'Rename test-rds-pg14 to poc-rds-standalone'...">
+            <button id="sendChatBtn" class="btn btn-primary">Send</button>
+          </div>
+        </div>
+
+        <!-- 3. RIGHT: DIRECT AI OPERATIONS & CHEATSHEET -->
+        <div class="quick-prompts-sidebar">
+          <h3 style="font-family: var(--font-heading); font-size: 0.95rem; color: var(--text-muted); text-transform: uppercase;">Direct AI Operations</h3>
+          
+          <button class="prompt-chip" data-prompt="Upgrade test-rds-pg14 to 18.3">
+            🚀 Upgrade test-rds-pg14 ➔ 18.3
+          </button>
+          <button class="prompt-chip" data-prompt="Rename test-rds-pg14 to poc-rds-standalone">
+            🔄 Rename test-rds-pg14 to poc-rds-standalone
+          </button>
+          <button class="prompt-chip" data-prompt="Change deletion policy for test-rds-pg14 to disabled">
+            🛡️ Disable Deletion Protection
+          </button>
+          <button class="prompt-chip" data-prompt="Turn off auto minor version upgrade for test-rds-pg14">
+            ⚙️ Disable Auto Minor Upgrade
+          </button>
+          <button class="prompt-chip" data-prompt="Configure extended support for test-rds-pg14">
+            ⏳ Configure Extended Support
+          </button>
+          <button class="prompt-chip" data-prompt="Change backup retention to 14 days for test-rds-pg14">
+            💾 Set Backup to 14 Days
+          </button>
+          <button class="prompt-chip" data-prompt="Discover and list all RDS instances and Aurora clusters in the fleet">
+            🔍 Discover & List Fleet
+          </button>
+          <button class="prompt-chip" data-prompt="Run full pre-flight audit on test-aurora-pg14 and highlight parameter risks">
+            🛡️ Audit test-aurora-pg14
+          </button>
+          <button class="prompt-chip" data-prompt="Delete Blue/Green deployment mapping to unlock database namespaces">
+            🧹 Delete BG Deployment
+          </button>
+          <button class="prompt-chip" data-prompt="Shutdown and stop decommissioned old database test-rds-pg14-old1">
+            ⏸️ Stop Old Database
+          </button>
+          <button class="prompt-chip" data-prompt="Permanently delete decommissioned database test-rds-pg14-old1">
+            🗑️ Delete Old Database
+          </button>
+          <button class="prompt-chip" data-prompt="Execute Doomsday Rollback on test-aurora-pg14">
+            🚨 Doomsday Rollback
+          </button>
+        </div>
+      </div>
+    </section>
+
+
+
+    <!-- 3. UPGRADE MISSION CONTROL PANE -->
+    <!-- 3. UPGRADE MISSION CONTROL PANE (Master-Detail View) -->
+    <section id="pipelinePane" class="tab-pane">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+        <div>
+          <h2 style="font-family: var(--font-heading); font-size: 1.5rem;">Blue/Green Upgrade Mission Control</h2>
+          <p style="color: var(--text-muted); font-size: 0.9rem; margin-top: 2px;">
+            Multi-database Blue/Green orchestration workspace with live telemetry, parameter diffs, and switchover gatekeeping.
+          </p>
+        </div>
+      </div>
+
+      <div class="mission-master-detail-layout">
+        
+        <!-- LEFT SIDEBAR: MASTER DEPLOYMENTS LIST (Scales to 50+ DBs) -->
+        <aside class="mission-sidebar">
+          <div class="sidebar-header">
+            <div>
+              <div class="sidebar-title">Database Deployments</div>
+              <div class="sidebar-subtitle">Blue/Green Active Fleet</div>
+            </div>
+            <span id="pipelineCountBadge" class="tab-badge">0</span>
+          </div>
+
+          <!-- Search & Filter Controls for Scaling to 50+ DBs -->
+          <div style="padding: 0.5rem 0.75rem 0.25rem; border-bottom: 1px solid var(--border-subtle); display: flex; flex-direction: column; gap: 0.4rem;">
+            <input type="text" id="masterSearchInput" placeholder="🔍 Search database, version, engine..." class="chat-input" style="font-size: 0.8rem; padding: 6px 10px; width: 100%;">
+            <div style="display: flex; gap: 0.3rem; overflow-x: auto; padding-bottom: 2px;" id="masterFilterChips">
+              <button class="stage-nav-pill active" data-filter="all" style="font-size: 0.72rem; padding: 2px 6px;">All</button>
+              <button class="stage-nav-pill" data-filter="ready" style="font-size: 0.72rem; padding: 2px 6px;">Ready</button>
+              <button class="stage-nav-pill" data-filter="provisioning" style="font-size: 0.72rem; padding: 2px 6px;">Syncing</button>
+              <button class="stage-nav-pill" data-filter="rds" style="font-size: 0.72rem; padding: 2px 6px;">RDS</button>
+              <button class="stage-nav-pill" data-filter="aurora" style="font-size: 0.72rem; padding: 2px 6px;">Aurora</button>
+            </div>
+          </div>
+
+          <div id="masterDeploymentsList" class="deployments-master-list">
+            <!-- Injected dynamically: master deployment cards -->
+          </div>
+        </aside>
+
+        <!-- RIGHT PANE: DETAIL WORKSPACE -->
+        <div class="mission-detail-workspace">
+          
+          <!-- Hero Header with Cutover Action Area -->
+          <div class="detail-hero-header">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                <h2 id="heroDbTitle" class="hero-title">-</h2>
+                <span id="heroTypeTag" class="card-type-tag tag-rds">📦 RDS Instance</span>
+                <span id="heroStatusBadge" class="status-badge available">● IDLE</span>
+              </div>
+              <div class="hero-subline">
+                <span id="heroDeploymentId" style="font-family: var(--font-mono); color: var(--accent-cyan);">-</span>
+                <span>•</span>
+                <span id="heroEngineMigration">-</span>
+              </div>
+            </div>
+
+            <div id="heroCutoverActionArea">
+              <!-- When cutover ready: big button. When provisioning: live subtask status -->
+            </div>
+          </div>
+
+          <!-- Topology Architecture Diagram Card -->
+          <div class="topology-diagram-card">
+            <div class="topo-node topo-blue">
+              <div class="topo-badge">🔵 BLUE SOURCE (PRODUCTION)</div>
+              <div class="topo-id" id="topoBlueId">-</div>
+              <div class="topo-ver" id="topoBlueVer">-</div>
+              <div class="topo-pg" id="topoBluePg">-</div>
+            </div>
+
+            <div class="topo-pipe">
+              <div class="topo-pipe-line"></div>
+              <div class="topo-pipe-label">
+                <span>⚡ Logical Replication</span>
+                <span id="topoLagBadge" class="val-badge pass">Lag: < 1.0s (Safe)</span>
+              </div>
+            </div>
+
+            <div class="topo-node topo-green">
+              <div class="topo-badge">🟢 GREEN TARGET (STAGING)</div>
+              <div class="topo-id" id="topoGreenId">-</div>
+              <div class="topo-ver" id="topoGreenVer">-</div>
+              <div class="topo-pg" id="topoGreenPg">-</div>
+            </div>
+          </div>
+
+          <!-- Stepper Progress Header -->
+          <div class="pipeline-stepper">
+            <div class="step-item inspecting" id="step1" onclick="inspectStage('1')" title="Click to validate Pre-Flight Audit">
+              <div class="step-circle">1</div>
+              <div class="step-label">1. Pre-Flight Audit</div>
+            </div>
+            <div class="step-item" id="step2" onclick="inspectStage('2')" title="Click to validate Snapshot & Reboot">
+              <div class="step-circle">2</div>
+              <div class="step-label">2. Snapshot & Reboot</div>
+            </div>
+            <div class="step-item" id="step3" onclick="inspectStage('3')" title="Click to validate B/G Provisioning">
+              <div class="step-circle">3</div>
+              <div class="step-label">3. B/G Provisioning</div>
+            </div>
+            <div class="step-item" id="step4" onclick="inspectStage('4')" title="Click to validate Policy Staging">
+              <div class="step-circle">4</div>
+              <div class="step-label">4. Policy Staging</div>
+            </div>
+            <div class="step-item" id="step5" onclick="inspectStage('5')" title="Click to validate Lag & Cutover Gate">
+              <div class="step-circle">5</div>
+              <div class="step-label">5. Lag & Cutover Gate</div>
+            </div>
+          </div>
+
+          <!-- Stage Validation & Diagnostics Inspector Panel -->
+          <div id="stageInspectorPanel" class="stage-inspector-box">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; border-bottom: 1px solid var(--border-subtle); padding-bottom: 0.75rem;">
+              <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <span style="font-size: 1.1rem; font-weight: 700; font-family: var(--font-heading);" id="stageInspectorTitle">
+                  🔍 Stage Diagnostics & Validation
+                </span>
+                <span id="stageInspectorBadge" class="status-badge available">VALIDATED</span>
+              </div>
+              <div style="display: flex; gap: 0.4rem;" id="stageNavPills">
+                <button class="stage-nav-pill active" onclick="inspectStage('1')">Stage 1</button>
+                <button class="stage-nav-pill" onclick="inspectStage('2')">Stage 2</button>
+                <button class="stage-nav-pill" onclick="inspectStage('3')">Stage 3</button>
+                <button class="stage-nav-pill" onclick="inspectStage('4')">Stage 4</button>
+                <button class="stage-nav-pill" onclick="inspectStage('5')">Stage 5</button>
+              </div>
+            </div>
+            <div id="stageInspectorSummary" style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 0.75rem;">
+              Select any pipeline stage above to view full parameter validation checklists, snapshot verifications, and replication health.
+            </div>
+            <div id="stageInspectorDetails">
+              <!-- Injected via JavaScript -->
+            </div>
+          </div>
+
+          <!-- Live Terminal Stream Card -->
+          <div class="card" style="padding: 1rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+              <span style="font-weight: 700; font-family: var(--font-mono); font-size: 0.9rem; color: var(--accent-cyan);">
+                TERMINAL EXECUTION LOGS
+              </span>
+              <span id="logStatusIndicator" style="font-size: 0.75rem; color: var(--accent-emerald);">● LIVE STREAMING</span>
+            </div>
+            <div id="terminalLogs" class="terminal-box">
+              <div class="log-line">
+                <span class="log-time">[00:00:00]</span>
+                <span class="log-msg-info">Awaiting upgrade trigger from Fleet explorer or Copilot.</span>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- 4. DOOMSDAY EMERGENCY ROLLBACK PANE -->
+    <section id="doomsdayPane" class="tab-pane">
+      <div class="card" style="border-color: rgba(244, 63, 94, 0.4); background: rgba(244, 63, 94, 0.03);">
+        <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
+          <span style="font-size: 2rem;">🚨</span>
+          <div>
+            <h2 style="font-family: var(--font-heading); font-size: 1.4rem; color: var(--accent-rose);">Doomsday Emergency Recovery Protocol</h2>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">
+              Forcefully cleans up locked Blue/Green deployments, renames failed Green instances, and restores original Blue databases without namespace collisions.
+            </p>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+          <div>
+            <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.5rem;">Select Database to Rollback:</label>
+            <select id="doomsdayDbSelect" class="chat-input" style="width: 100%; margin-bottom: 1rem;">
+              <!-- Options loaded dynamically -->
+            </select>
+            
+            <div style="font-size: 0.85rem; color: var(--text-faint); line-height: 1.5; margin-bottom: 1.5rem;">
+              ⚠️ <strong>Warning:</strong> Any writes committed to the Green database after cutover will be lost. The original Blue DB will be renamed back to primary production identifier.
+            </div>
+
+            <button id="executeDoomsdayBtn" class="btn btn-danger" style="width: 100%;">
+              🚨 Initiate Doomsday Rollback
+            </button>
+          </div>
+
+          <div id="doomsdayTerminal" class="terminal-box" style="height: 250px;">
+            <div class="log-line">
+              <span class="log-time">[00:00:00]</span>
+              <span class="log-msg-info">Doomsday protocol standing by.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- MODAL: PRE-FLIGHT AUDIT & UPGRADE LAUNCHER -->
+  <div id="auditModal" class="modal-backdrop">
+    <div class="modal-window" style="max-width: 750px;">
+      <div class="modal-header">
+        <div class="modal-title" id="auditModalTitle">🛡️ Pre-Flight Audit & Upgrade Path</div>
+        <button class="modal-close" onclick="closeModal('auditModal')">&times;</button>
+      </div>
+      <div id="auditModalBody" style="max-height: 60vh; overflow-y: auto;">
+        <!-- Injected dynamically -->
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" onclick="closeModal('auditModal')">Close</button>
+        <button id="launchUpgradeBtn" class="btn btn-primary">🚀 Launch Blue/Green Upgrade</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: RENAME DATABASE -->
+  <div id="renameModal" class="modal-backdrop">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">🔄 Rename AWS RDS Database</div>
+        <button class="modal-close" onclick="closeModal('renameModal')">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Select Database to Rename</label>
+          <select id="renameDbSelect" class="chat-input" style="width: 100%;">
+            <!-- Injected dynamically -->
+          </select>
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">New Database Identifier</label>
+          <input type="text" id="renameNewIdInput" class="chat-input" style="width: 100%; font-family: var(--font-mono);" placeholder="e.g. poc-rds-standalone">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" onclick="closeModal('renameModal')">Cancel</button>
+        <button id="confirmRenameBtn" class="btn btn-primary">🔄 Rename Database</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: USER PROFILE SETTINGS -->
+  <div id="profileModal" class="modal-backdrop">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">👤 User Identity & Profile</div>
+        <button class="modal-close" onclick="closeModal('profileModal')">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Your Name / Handle</label>
+          <input type="text" id="profileNameInput" class="chat-input" style="width: 100%;" placeholder="Cloud DevOps Lead">
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Role Title</label>
+          <input type="text" id="profileRoleInput" class="chat-input" style="width: 100%;" placeholder="Database Administrator / Lead SRE">
+        </div>
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Avatar Emoji</label>
+          <select id="profileAvatarSelect" class="chat-input" style="width: 100%;">
+            <option value="👨‍💻">👨‍💻 Developer / DBA</option>
+            <option value="👩‍💻">👩‍💻 Lead Engineer</option>
+            <option value="⚡">⚡ Cloud Architect</option>
+            <option value="🛡️">🛡️ Security / DevOps</option>
+            <option value="🚀">🚀 SRE Commander</option>
+          </select>
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" onclick="closeModal('profileModal')">Cancel</button>
+        <button id="saveProfileBtn" class="btn btn-primary">Save Profile</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SETTINGS & MODEL CONFIGURATION -->
+  <div id="settingsModal" class="modal-backdrop">
+    <div class="modal-window">
+      <div class="modal-header">
+        <div class="modal-title">⚙️ Engine & Model Settings</div>
+        <button class="modal-close" onclick="closeModal('settingsModal')">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">AI Brain Provider</label>
+          <select id="modalProviderSelect" class="chat-input" style="width: 100%;">
+            <option value="local_llm" selected>LM Studio: DeepSeek-R1 (localhost:1234)</option>
+            <option value="gemini_flash">Gemini 2.5 Flash (Google Cloud API)</option>
+            <option value="built_in">Deterministic Agent (Rule-based & heuristic reasoner)</option>
+          </select>
+        </div>
+        <div id="ollamaEndpointGroup">
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Local LLM Endpoint (LM Studio / Ollama)</label>
+          <input type="text" id="ollamaEndpointInput" class="chat-input" style="width: 100%;" placeholder="http://localhost:1234/v1">
+        </div>
+        <div id="geminiKeyGroup">
+          <label style="font-size: 0.85rem; color: var(--text-muted); display: block; margin-bottom: 0.4rem;">Gemini API Key (Optional)</label>
+          <input type="password" id="geminiApiKeyInput" class="chat-input" style="width: 100%;" placeholder="AIzaSy...">
+        </div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 0.75rem; margin-top: 1.5rem;">
+        <button class="btn btn-secondary" onclick="closeModal('settingsModal')">Cancel</button>
+        <button id="saveSettingsBtn" class="btn btn-primary">Save Settings</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
+
